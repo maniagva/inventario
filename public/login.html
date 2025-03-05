@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Seguridad Electrónica</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="page-loader" class="loader"><div class="spinner"></div></div>
+    <div class="login-container">
+        <img src="img/logo.jpg" alt="Logo" class="login-logo">
+        <h1>Seguridad Electrónica</h1>
+        <form id="loginForm">
+            <h2>Iniciar Sesión</h2>
+            <input type="email" id="correo" placeholder="📧 Correo" required autocomplete="username">
+            <input type="password" id="contrasena" placeholder="🔒 Contraseña" required autocomplete="current-password">
+            <button type="submit">Ingresar</button>
+            <p id="errorMensaje" style="color: #ff6b6b; font-size: 14px; margin-top: 20px; display: none;"></p>
+        </form>
+    </div>
+    <script>
+        // Ocultar el loader global cuando la página carga
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('page-loader').classList.add('hidden');
+            }, 500); // Simula un pequeño retraso para mostrar el loader
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const correo = document.getElementById('correo').value;
+            const contrasena = document.getElementById('contrasena').value;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ correo, contrasena })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('rol', data.rol);
+                    localStorage.setItem('correo', data.correo);
+                    window.location.href = '/';
+                } else {
+                    document.getElementById('errorMensaje').textContent = data.message;
+                    document.getElementById('errorMensaje').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error en login:', error);
+                document.getElementById('errorMensaje').textContent = 'Error en la conexión. Intente de nuevo.';
+                document.getElementById('errorMensaje').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

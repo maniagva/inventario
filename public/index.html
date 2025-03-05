@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Inventario - Seguridad Electrónica</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="particles-js"></div>
+    <div id="page-loader" class="loader"><div class="spinner"></div></div>
+    <div class="container">
+        <header class="header">
+            <img src="img/logo.jpg" alt="Logo">
+            <h1>Seguridad Electrónica</h1>
+        </header>
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li><button data-section="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</button></li>
+                    <li><button data-section="productos"><i class="fas fa-box"></i> Productos</button></li>
+                    <li id="movimientosNav"><button data-section="movimientos"><i class="fas fa-exchange-alt"></i> Movimientos</button></li>
+                    <li id="inventarioNav"><button data-section="inventario"><i class="fas fa-warehouse"></i> Inventario Actual</button></li>
+                    <li id="empleadosNav"><button data-section="empleados"><i class="fas fa-users"></i> Empleados</button></li>
+                    <li id="proveedoresNav"><button data-section="proveedores"><i class="fas fa-truck"></i> Proveedores</button></li>
+                    <li id="categoriasNav"><button data-section="categorias"><i class="fas fa-tags"></i> Categorías</button></li>
+                    <li id="ubicacionesNav"><button data-section="ubicaciones"><i class="fas fa-map-marker-alt"></i> Ubicaciones</button></li>
+                    <li id="registroMovimientosNav"><button data-section="registroMovimientos"><i class="fas fa-plus-circle"></i> Registrar Movimiento</button></li>
+                    <li id="reportesNav"><button data-section="reportes"><i class="fas fa-chart-bar"></i> Reportes</button></li>
+                    <li id="configuracionNav"><button data-section="configuracion"><i class="fas fa-cog"></i> Configuración</button></li>
+                    <li><button class="logout-btn" data-action="logout"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button></li>
+                </ul>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <!-- Sección Dashboard -->
+            <section id="dashboard" class="content-section active">
+                <h2>Dashboard</h2>
+                <div id="dashboardStats" style="display: flex; gap: 20px; margin-bottom: 20px;">
+                    <div class="stat-card"><h3>Total Productos</h3><p id="totalProductos">0</p></div>
+                    <div class="stat-card"><h3>Movimientos Hoy</h3><p id="movimientosHoy">0</p></div>
+                    <div class="stat-card"><h3>Stock Crítico</h3><p id="stockCritico">0</p></div>
+                </div>
+                <canvas id="stockChart" style="max-width: 600px;"></canvas>
+            </section>
+
+            <!-- Sección Productos -->
+            <section id="productos" class="content-section">
+                <h2>Productos</h2>
+                <button class="btn" data-action="add-product">Agregar Producto</button>
+                <button class="btn" data-action="add-category">Agregar Categoría</button>
+                <input type="text" id="searchProductos" placeholder="🔍 Buscar producto...">
+                <table id="productosTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Código</th>
+                            <th>Categoría</th>
+                            <th>Proveedor</th>
+                            <th>Precio</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody><div id="productosLoader" class="table-loader"></div></tbody>
+                </table>
+                <div id="productosForm" class="form-container" style="display: none;">
+                    <h3 id="productosFormTitle">Agregar Producto</h3>
+                    <form id="productosAddEditForm">
+                        <input type="hidden" id="productoId">
+                        <label>Nombre:</label><input type="text" id="productoNombre" required>
+                        <label>Código:</label><input type="text" id="productoCodigo" required>
+                        <label>Categoría:</label><select id="productoCategoria" required></select>
+                        <label>Proveedor:</label><select id="productoProveedor" required></select>
+                        <label>Precio Unitario:</label><input type="number" id="productoPrecio" step="0.01" min="0" required>
+                        <button type="submit">Guardar</button>
+                        <button type="button" data-action="cancel-product">Cancelar</button>
+                    </form>
+                </div>
+                <div id="newCategoriaForm" class="form-container" style="display: none;">
+                    <h3 id="newCategoriaFormTitle">Agregar Categoría</h3>
+                    <form id="newCategoriaAddForm">
+                        <label>Nombre:</label><input type="text" id="newCategoriaNombre" required>
+                        <label>Descripción:</label><textarea id="newCategoriaDescripcion"></textarea>
+                        <button type="submit">Guardar</button>
+                        <button type="button" data-action="cancel-category">Cancelar</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Sección Movimientos -->
+            <section id="movimientos" class="content-section">
+                <h2>Movimientos de Inventario</h2>
+                <input type="text" id="searchMovimientos" placeholder="🔍 Buscar movimiento...">
+                <table id="movimientosTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Producto</th>
+                            <th>Ubicación</th>
+                            <th>Empleado</th>
+                            <th>Tipo</th>
+                            <th>Cantidad</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody><div id="movimientosLoader" class="table-loader"></div></tbody>
+                </table>
+            </section>
+
+            <!-- Sección Inventario -->
+            <section id="inventario" class="content-section">
+                <h2>Inventario Actual</h2>
+                <input type="text" id="searchInventario" placeholder="🔍 Buscar inventario...">
+                <table id="inventarioTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Producto</th>
+                            <th>Ubicación</th>
+                            <th>Stock</th>
+                            <th>Última Actualización</th>
+                        </tr>
+                    </thead>
+                    <tbody><div id="inventarioLoader" class="table-loader"></div></tbody>
+                </table>
+            </section>
+
+            <!-- Sección Empleados -->
+            <section id="empleados" class="content-section">
+                <h2>Gestión de Empleados</h2>
+                <button class="btn" data-action="add-employee">Agregar Empleado</button>
+                <input type="text" id="searchEmpleados" placeholder="🔍 Buscar empleado...">
+                <table id="empleadosTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Teléfono</th>
+                            <th>Rol</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody><div id="empleadosLoader" class="table-loader"></div></tbody>
+                </table>
+                <div id="empleadosForm" class="form-container" style="display: none;">
+                    <h3 id="empleadosFormTitle">Agregar Empleado</h3>
+                    <form id="empleadosAddEditForm">
+                        <input type="hidden" id="empleadoId">
+                        <label>Nombre:</label><input type="text" id="empleadoNombre" required>
+                        <label>Correo:</label><input type="email" id="empleadoCorreo" required autocomplete="email">
+                        <label>Teléfono:</label><input type="text" id="empleadoTelefono" required autocomplete="tel">
+                        <label>Rol:</label><select id="empleadoRol" required></select>
+                        <label>Contraseña:</label><input type="password" id="empleadoContrasena" autocomplete="new-password">
+                        <button type="submit">Guardar</button>
+                        <button type="button" data-action="cancel-employee">Cancelar</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Sección Proveedores -->
+            <section id="proveedores" class="content-section">
+                <h2>Gestión de Proveedores</h2>
+                <button class="btn" data-action="add-supplier">Agregar Proveedor</button>
+                <input type="text" id="searchProveedores" placeholder="🔍 Buscar proveedor...">
+                <table id="proveedoresTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Contacto</th>
+                            <th>Teléfono</th>
+                            <th>Correo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody><div id="proveedoresLoader" class="table-loader"></div></tbody>
+                </table>
+                <div id="proveedoresForm" class="form-container" style="display: none;">
+                    <h3 id="proveedoresFormTitle">Agregar Proveedor</h3>
+                    <form id="proveedoresAddEditForm">
+                        <input type="hidden" id="proveedorId">
+                        <label>Nombre:</label><input type="text" id="proveedorNombre" required>
+                        <label>Contacto:</label><input type="text" id="proveedorContacto" required>
+                        <label>Teléfono:</label><input type="text" id="proveedorTelefono" required>
+                        <label>Correo:</label><input type="email" id="proveedorCorreo" required>
+                        <button type="submit">Guardar</button>
+                        <button type="button" data-action="cancel-supplier">Cancelar</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Sección Categorías -->
+            <section id="categorias" class="content-section">
+                <h2>Categorías de Productos</h2>
+                <button class="btn" data-action="add-category">Agregar Categoría</button>
+                <input type="text" id="searchCategorias" placeholder="🔍 Buscar categoría...">
+                <table id="categoriasTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody><div id="categoriasLoader" class="table-loader"></div></tbody>
+                </table>
+                <div id="categoriasForm" class="form-container" style="display: none;">
+                    <h3 id="categoriasFormTitle">Agregar Categoría</h3>
+                    <form id="categoriasAddEditForm">
+                        <input type="hidden" id="categoriaId">
+                        <label>Nombre:</label><input type="text" id="categoriaNombre" required>
+                        <label>Descripción:</label><textarea id="categoriaDescripcion"></textarea>
+                        <button type="submit">Guardar</button>
+                        <button type="button" data-action="cancel-category">Cancelar</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Sección Ubicaciones -->
+            <section id="ubicaciones" class="content-section">
+                <h2>Ubicaciones</h2>
+                <button class="btn" data-action="add-location">Agregar Ubicación</button>
+                <input type="text" id="searchUbicaciones" placeholder="🔍 Buscar ubicación...">
+                <table id="ubicacionesTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Dirección</th>
+                            <th>Tipo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody><div id="ubicacionesLoader" class="table-loader"></div></tbody>
+                </table>
+                <div id="ubicacionesForm" class="form-container" style="display: none;">
+                    <h3 id="ubicacionesFormTitle">Agregar Ubicación</h3>
+                    <form id="ubicacionesAddEditForm">
+                        <input type="hidden" id="ubicacionId">
+                        <label>Nombre:</label><input type="text" id="ubicacionNombre" required>
+                        <label>Dirección:</label><textarea id="ubicacionDireccion" required></textarea>
+                        <label>Tipo:</label><input type="text" id="ubicacionTipo" required>
+                        <button type="submit">Guardar</button>
+                        <button type="button" data-action="cancel-location">Cancelar</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Sección Registrar Movimientos -->
+            <section id="registroMovimientos" class="content-section">
+                <h2>Registrar Movimiento</h2>
+                <form id="movimientoForm">
+                    <label for="productoSelect">Producto:</label>
+                    <select id="productoSelect" required></select>
+                    <label for="ubicacionSelect">Ubicación:</label>
+                    <select id="ubicacionSelect" required></select>
+                    <label for="tipoMovimiento">Tipo:</label>
+                    <select id="tipoMovimiento" required>
+                        <option value="Entrada">Entrada</option>
+                        <option value="Salida">Salida</option>
+                    </select>
+                    <label for="cantidad">Cantidad:</label>
+                    <input type="number" id="cantidad" min="1" required>
+                    <button class="btn" type="submit">Registrar</button>
+                    <p id="movimientoMensaje" style="color: #28a745; font-size: 14px; margin-top: 20px; display: none;"></p>
+                </form>
+            </section>
+
+            <!-- Sección Reportes -->
+            <section id="reportes" class="content-section">
+                <h2>Reportes</h2>
+                <div style="margin-bottom: 20px;">
+                    <button class="btn" data-action="report-stock">Stock Bajo</button>
+                    <button class="btn" data-action="report-movements">Movimientos del Día</button>
+                </div>
+                <table id="reportesTable">
+                    <thead id="reportesHead"></thead>
+                    <tbody id="reportesBody"><div id="reportesLoader" class="table-loader"></div></tbody>
+                </table>
+            </section>
+
+            <!-- Sección Configuración -->
+            <section id="configuracion" class="content-section">
+                <h2>Configuración</h2>
+                <div style="margin-bottom: 20px;">
+                    <h3>Roles</h3>
+                    <button class="btn" data-action="add-role">Agregar Rol</button>
+                    <input type="text" id="searchRoles" placeholder="🔍 Buscar rol...">
+                    <table id="rolesTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody><div id="rolesLoader" class="table-loader"></div></tbody>
+                    </table>
+                    <div id="rolesForm" class="form-container" style="display: none;">
+                        <h3 id="rolesFormTitle">Agregar Rol</h3>
+                        <form id="rolesAddEditForm">
+                            <input type="hidden" id="rolId">
+                            <label>Nombre:</label><input type="text" id="rolNombre" required>
+                            <label>Descripción:</label><textarea id="rolDescripcion"></textarea>
+                            <button type="submit">Guardar</button>
+                            <button type="button" data-action="cancel-role">Cancelar</button>
+                        </form>
+                    </div>
+                </div>
+                <div>
+                    <h3>Cambiar Contraseña</h3>
+                    <form id="cambiarContrasenaForm">
+                        <label for="currentUserEmail" style="display: none;">Correo:</label>
+                        <input type="email" id="currentUserEmail" name="username" autocomplete="username" style="display: none;">
+                        <label>Contraseña Actual:</label><input type="password" id="contrasenaActual" required autocomplete="current-password">
+                        <label>Nueva Contraseña:</label><input type="password" id="contrasenaNueva" required autocomplete="new-password">
+                        <button class="btn" type="submit">Cambiar</button>
+                        <p id="contrasenaMensaje" style="color: #28a745; font-size: 14px; margin-top: 20px; display: none;"></p>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+        // Importar módulos
+        import { logout } from './js/auth.js';
+        import { showSection, toggleTableLoader, showNotification } from './js/ui.js';
+        import { loadTable, filterTable, exportToCSV } from './js/tables.js';
+        import { showAddForm, hideForm, editItem, deleteItem, validateForm } from './js/forms.js';
+        import { fetchData } from './js/api.js';
+        import { loadDashboard } from './js/dashboard.js';
+        import { loadReporte } from './js/reports.js';
+
+        // Configurar particles.js
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 50, density: { enable: true, value_area: 800 } },
+                color: { value: '#adb5bd' },
+                shape: { type: 'circle' },
+                opacity: { value: 0.3, random: true },
+                size: { value: 2, random: true },
+                line_linked: { enable: false },
+                move: { speed: 1, direction: 'none', random: true }
+            },
+            interactivity: { detect_on: 'canvas', events: { onhover: { enable: false }, onclick: { enable: false } } },
+            retina_detect: true
+        });
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('page-loader').classList.add('hidden');
+            }, 500);
+        });
+
+        // Manejar eventos del sidebar y botones
+        document.addEventListener('DOMContentLoaded', () => {
+            const rol = localStorage.getItem('rol');
+
+            // Ocultar secciones según rol
+            if (rol !== 'Administrador' && rol !== 'Almacenista' && rol !== 'Auditor') document.getElementById('movimientosNav').style.display = 'none';
+            if (rol !== 'Administrador' && rol !== 'Auditor') document.getElementById('inventarioNav').style.display = 'none';
+            if (rol !== 'Administrador') document.getElementById('empleadosNav').style.display = 'none';
+            if (rol !== 'Administrador' && rol !== 'Contador') document.getElementById('proveedoresNav').style.display = 'none';
+            if (rol !== 'Administrador') document.getElementById('categoriasNav').style.display = 'none';
+            if (rol !== 'Administrador' && rol !== 'Almacenista') document.getElementById('ubicacionesNav').style.display = 'none';
+            if (rol !== 'Administrador' && rol !== 'Almacenista') document.getElementById('registroMovimientosNav').style.display = 'none';
+            if (rol !== 'Administrador' && rol !== 'Auditor' && rol !== 'Contador') document.getElementById('reportesNav').style.display = 'none';
+            if (rol !== 'Administrador') document.getElementById('configuracionNav').style.display = 'none';
+
+            // Manejar clics en el sidebar
+            document.querySelectorAll('.sidebar button[data-section]').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const sectionId = e.target.getAttribute('data-section');
+                    if (sectionId) showSection(sectionId);
+                });
+            });
+
+            // Manejar logout
+            document.querySelector('.sidebar button[data-action="logout"]').addEventListener('click', () => {
+                logout();
+            });
+
+            // Manejar botones de acción (agregar, editar, eliminar, etc.)
+            document.addEventListener('click', (e) => {
+    const target = e.target;
+    const action = target.getAttribute('data-action');
+    if (!action) return; // Salir si no hay acción
+    console.log(`Acción detectada: ${action}`);
+
+    // Determinar tableId desde el contexto
+    let tableId = target.getAttribute('data-table') || target.closest('section')?.id;
+    if (!tableId && (action === 'edit' || action === 'delete')) {
+        tableId = target.closest('table')?.id.replace('Table', '');
+    }
+
+    if (action === 'add-product') showAddForm('productos');
+    else if (action === 'add-category') showAddForm('newCategoria');
+    else if (action === 'add-employee') showAddForm('empleados');
+    else if (action === 'add-supplier') showAddForm('proveedores');
+    else if (action === 'add-location') showAddForm('ubicaciones');
+    else if (action === 'add-role') showAddForm('roles');
+    else if (action === 'cancel-product') hideForm('productos');
+    else if (action === 'cancel-category') hideForm(tableId === 'categorias' ? 'categorias' : 'newCategoria');
+    else if (action === 'cancel-employee') hideForm('empleados');
+    else if (action === 'cancel-supplier') hideForm('proveedores');
+    else if (action === 'cancel-location') hideForm('ubicaciones');
+    else if (action === 'cancel-role') hideForm('roles');
+    else if (action === 'report-stock') loadReporte('stock_bajo');
+    else if (action === 'report-movements') loadReporte('movimientos_dia');
+    else if (action === 'edit') {
+        const id = target.getAttribute('data-id');
+        if (tableId && id) {
+            console.log(`Editando ${tableId} con ID: ${id}`);
+            editItem(tableId, id);
+        } else {
+            console.error('Falta tableId o ID para editar');
+        }
+    } else if (action === 'delete') {
+        const id = target.getAttribute('data-id');
+        if (tableId && id) {
+            console.log(`Eliminando ${tableId} con ID: ${id}`);
+            deleteItem(tableId, id);
+        } else {
+            console.error('Falta tableId o ID para eliminar');
+        }
+    } else {
+        console.warn(`Acción no reconocida: ${action}`);
+    }
+});
+            // Filtrar tablas
+            ['productos', 'movimientos', 'inventario', 'empleados', 'proveedores', 'categorias', 'ubicaciones', 'roles'].forEach(tableId => {
+                const searchInput = document.getElementById(`search${tableId.charAt(0).toUpperCase() + tableId.slice(1)}`);
+                if (searchInput) {
+                    searchInput.addEventListener('keyup', () => filterTable(tableId, tableId !== 'productos' && tableId !== 'movimientos' && tableId !== 'inventario'));
+                }
+            });
+
+            // Cargar datos iniciales
+            toggleTableLoader('productos', true);
+            fetchData('/api/productos')
+                .then(data => loadTable('productos', data, rol === 'Administrador'))
+                .catch(error => { 
+                    console.error('Error cargando productos:', error); 
+                    toggleTableLoader('productos', false); 
+                    showNotification('Error al cargar productos', true);
+                });
+
+            if (rol === 'Administrador' || rol === 'Almacenista' || rol === 'Auditor') {
+                toggleTableLoader('movimientos', true);
+                fetchData('/api/movimientos')
+                    .then(data => loadTable('movimientos', data))
+                    .catch(error => { 
+                        console.error('Error cargando movimientos:', error); 
+                        toggleTableLoader('movimientos', false); 
+                        showNotification('Error al cargar movimientos', true);
+                    });
+            }
+
+            if (rol === 'Administrador' || rol === 'Auditor') {
+                toggleTableLoader('inventario', true);
+                fetchData('/api/inventario')
+                    .then(data => loadTable('inventario', data))
+                    .catch(error => { 
+                        console.error('Error cargando inventario:', error); 
+                        toggleTableLoader('inventario', false); 
+                        showNotification('Error al cargar inventario', true);
+                    });
+            }
+
+            if (rol === 'Administrador') {
+                toggleTableLoader('empleados', true);
+                fetchData('/api/empleados')
+                    .then(data => loadTable('empleados', data, true))
+                    .catch(error => { 
+                        console.error('Error cargando empleados:', error); 
+                        toggleTableLoader('empleados', false); 
+                        showNotification('Error al cargar empleados', true);
+                    });
+
+                toggleTableLoader('categorias', true);
+                fetchData('/api/categorias')
+                    .then(data => loadTable('categorias', data, true))
+                    .catch(error => { 
+                        console.error('Error cargando categorías:', error); 
+                        toggleTableLoader('categorias', false); 
+                        showNotification('Error al cargar categorías', true);
+                    });
+
+                toggleTableLoader('roles', true);
+                fetchData('/api/roles')
+                    .then(data => loadTable('roles', data, true))
+                    .catch(error => { 
+                        console.error('Error cargando roles:', error); 
+                        toggleTableLoader('roles', false); 
+                        showNotification('Error al cargar roles', true);
+                    });
+
+                // Formularios para empleados
+                document.getElementById('empleadosAddEditForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const validationError = validateForm('empleados');
+                    if (validationError) {
+                        showNotification(validationError, true);
+                        return;
+                    }
+                    const id = document.getElementById('empleadoId').value;
+                    const method = id ? 'PUT' : 'POST';
+                    const url = id ? `/api/empleados/${id}` : '/api/empleados';
+                    const body = {
+                        nombre: document.getElementById('empleadoNombre').value,
+                        correo: document.getElementById('empleadoCorreo').value,
+                        telefono: document.getElementById('empleadoTelefono').value,
+                        id_rol: document.getElementById('empleadoRol').value
+                    };
+                    if (!id || document.getElementById('empleadoContrasena').value) {
+                        body.contrasena = document.getElementById('empleadoContrasena').value;
+                    }
+                    try {
+                        const response = await fetchData(url, { method, body: JSON.stringify(body) });
+                        showNotification(response.message);
+                        hideForm('empleados');
+                        filterTable('empleados', true);
+                    } catch (error) {
+                        console.error('Error guardando empleado:', error);
+                        showNotification('Error al guardar empleado', true);
+                    }
+                });
+
+                // Formularios para categorías
+                document.getElementById('categoriasAddEditForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const validationError = validateForm('categorias');
+                    if (validationError) {
+                        showNotification(validationError, true);
+                        return;
+                    }
+                    const id = document.getElementById('categoriaId').value;
+                    const method = id ? 'PUT' : 'POST';
+                    const url = id ? `/api/categorias/${id}` : '/api/categorias';
+                    const body = {
+                        nombre: document.getElementById('categoriaNombre').value,
+                        descripcion: document.getElementById('categoriaDescripcion').value
+                    };
+                    try {
+                        const response = await fetchData(url, { method, body: JSON.stringify(body) });
+                        showNotification(response.message);
+                        hideForm('categorias');
+                        filterTable('categorias', true);
+                        loadFormOptions(); // Actualizar select de categorías en productos
+                    } catch (error) {
+                        console.error('Error guardando categoría:', error);
+                        showNotification('Error al guardar categoría', true);
+                    }
+                });
+
+                // Formularios para roles
+                document.getElementById('rolesAddEditForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const validationError = validateForm('roles');
+                    if (validationError) {
+                        showNotification(validationError, true);
+                        return;
+                    }
+                    const id = document.getElementById('rolId').value;
+                    const method = id ? 'PUT' : 'POST';
+                    const url = id ? `/api/roles/${id}` : '/api/roles';
+                    const body = {
+                        nombre_rol: document.getElementById('rolNombre').value,
+                        descripcion: document.getElementById('rolDescripcion').value
+                    };
+                    try {
+                        const response = await fetchData(url, { method, body: JSON.stringify(body) });
+                        showNotification(response.message);
+                        hideForm('roles');
+                        filterTable('roles', true);
+                    } catch (error) {
+                        console.error('Error guardando rol:', error);
+                        showNotification('Error al guardar rol', true);
+                    }
+                });
+
+                // Formularios para productos
+                document.getElementById('productosAddEditForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const validationError = validateForm('productos');
+                    if (validationError) {
+                        showNotification(validationError, true);
+                        return;
+                    }
+                    const id = document.getElementById('productoId').value;
+                    const method = id ? 'PUT' : 'POST';
+                    const url = id ? `/api/productos/${id}` : '/api/productos';
+                    const body = {
+                        nombre: document.getElementById('productoNombre').value,
+                        codigo: document.getElementById('productoCodigo').value,
+                        id_categoria: document.getElementById('productoCategoria').value,
+                        id_proveedor: document.getElementById('productoProveedor').value,
+                        precio_unitario: parseFloat(document.getElementById('productoPrecio').value)
+                    };
+
+                    // Verificar si el código ya existe
+                    try {
+                        const codigo = body.codigo;
+                        let originalCodigo = '';
+                        if (id) {
+                            const originalResponse = await fetchData(`/api/productos/${id}`);
+                            originalCodigo = originalResponse.codigo || '';
+                        }
+
+                        const checkUrl = `/api/productos/checkCodigo?codigo=${encodeURIComponent(codigo)}&id=${id || 0}`;
+                        const checkResponse = await fetchData(checkUrl);
+                        if (checkResponse.exists && (!id || (checkResponse.product?.codigo !== originalCodigo && checkResponse.product?.codigo !== codigo))) {
+                            showNotification('El código ya está en uso por otro producto', true);
+                            return;
+                        }
+                        try {
+                            const response = await fetchData(url, { method, body: JSON.stringify(body) });
+                            showNotification(response.message);
+                            hideForm('productos');
+                            toggleTableLoader('productos', true);
+                            const updatedData = await fetchData('/api/productos');
+                            loadTable('productos', updatedData, true);
+                        } catch (error) {
+                            console.error('Error guardando producto:', error);
+                            showNotification(error.message || 'Error al guardar producto', true);
+                        }
+                        loadFormOptions(); // Actualizar selects si es necesario
+                    } catch (error) {
+                        console.error('Error guardando producto:', error);
+                        showNotification('Error al guardar producto', true);
+                    }
+                });
+
+                // Formularios para nueva categoría
+                document.getElementById('newCategoriaAddForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const validationError = validateForm('newCategoria');
+                    if (validationError) {
+                        showNotification(validationError, true);
+                        return;
+                    }
+                    const body = {
+                        nombre: document.getElementById('newCategoriaNombre').value,
+                        descripcion: document.getElementById('newCategoriaDescripcion').value
+                    };
+                    try {
+                        const response = await fetchData('/api/categorias', { method: 'POST', body: JSON.stringify(body) });
+                        showNotification(response.message);
+                        hideForm('newCategoria');
+                        loadFormOptions(); // Actualizar select de categorías
+                        filterTable('categorias', true); // Actualizar tabla de categorías
+                    } catch (error) {
+                        console.error('Error guardando nueva categoría:', error);
+                        showNotification('Error al guardar categoría', true);
+                    }
+                });
+            }
+
+            if (rol === 'Administrador' || rol === 'Contador') {
+                toggleTableLoader('proveedores', true);
+                fetchData('/api/proveedores')
+                    .then(data => loadTable('proveedores', data, true))
+                    .catch(error => { 
+                        console.error('Error cargando proveedores:', error); 
+                        toggleTableLoader('proveedores', false); 
+                        showNotification('Error al cargar proveedores', true);
+                    });
+
+                document.getElementById('proveedoresAddEditForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const validationError = validateForm('proveedores');
+                    if (validationError) {
+                        showNotification(validationError, true);
+                        return;
+                    }
+                    const id = document.getElementById('proveedorId').value;
+                    const method = id ? 'PUT' : 'POST';
+                    const url = id ? `/api/proveedores/${id}` : '/api/proveedores';
+                    const body = {
+                        nombre: document.getElementById('proveedorNombre').value,
+                        contacto: document.getElementById('proveedorContacto').value,
+                        telefono: document.getElementById('proveedorTelefono').value,
+                        correo: document.getElementById('proveedorCorreo').value
+                    };
+                    try {
+                        const response = await fetchData(url, { method, body: JSON.stringify(body) });
+                        showNotification(response.message);
+                        hideForm('proveedores');
+                        filterTable('proveedores', true);
+                    } catch (error) {
+                        console.error('Error guardando proveedor:', error);
+                        showNotification('Error al guardar proveedor', true);
+                    }
+                });
+            }
+
+            if (rol === 'Administrador' || rol === 'Almacenista') {
+                toggleTableLoader('ubicaciones', true);
+                fetchData('/api/ubicaciones')
+                    .then(data => loadTable('ubicaciones', data, true))
+                    .catch(error => { 
+                        console.error('Error cargando ubicaciones:', error); 
+                        toggleTableLoader('ubicaciones', false); 
+                        showNotification('Error al cargar ubicaciones', true);
+                    });
+
+                loadFormOptions();
+                document.getElementById('movimientoForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const id_producto = document.getElementById('productoSelect').value;
+                    const id_ubicacion = document.getElementById('ubicacionSelect').value;
+                    const tipo_movimiento = document.getElementById('tipoMovimiento').value;
+                    const cantidadInput = document.getElementById('cantidad').value;
+                    const cantidad = parseInt(cantidadInput);
+
+                    if (!id_producto) {
+                        showNotification('Seleccione un producto', true);
+                        return;
+                    }
+                    if (!id_ubicacion) {
+                        showNotification('Seleccione una ubicación', true);
+                        return;
+                    }
+                    if (!Number.isInteger(cantidad) || cantidad <= 0) {
+                        showNotification('La cantidad debe ser un número entero positivo', true);
+                        return;
+                    }
+
+                    try {
+                        const response = await fetchData('/api/movimientos', { method: 'POST', body: JSON.stringify({ id_producto, id_ubicacion, tipo_movimiento, cantidad }) });
+                        showNotification(response.message);
+                        document.getElementById('movimientoForm').reset();
+                    } catch (error) {
+                        console.error('Error registrando movimiento:', error);
+                        showNotification('Error al registrar movimiento', true);
+                    }
+                });
+
+                document.getElementById('ubicacionesAddEditForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const validationError = validateForm('ubicaciones');
+                    if (validationError) {
+                        showNotification(validationError, true);
+                        return;
+                    }
+                    const id = document.getElementById('ubicacionId').value;
+                    const method = id ? 'PUT' : 'POST';
+                    const url = id ? `/api/ubicaciones/${id}` : '/api/ubicaciones';
+                    const body = {
+                        nombre: document.getElementById('ubicacionNombre').value,
+                        direccion: document.getElementById('ubicacionDireccion').value,
+                        tipo: document.getElementById('ubicacionTipo').value
+                    };
+                    try {
+                        const response = await fetchData(url, { method, body: JSON.stringify(body) });
+                        showNotification(response.message);
+                        hideForm('ubicaciones');
+                        filterTable('ubicaciones', true);
+                    } catch (error) {
+                        console.error('Error guardando ubicación:', error);
+                        showNotification('Error al guardar ubicación', true);
+                    }
+                });
+            }
+
+            loadDashboard();
+
+            if (rol === 'Administrador' || rol === 'Auditor' || rol === 'Contador') {
+                loadReporte('stock_bajo');
+            }
+
+            document.getElementById('cambiarContrasenaForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const validationError = validateForm('cambiarContrasena');
+                if (validationError) {
+                    showNotification(validationError, true);
+                    return;
+                }
+                const contrasena_actual = document.getElementById('contrasenaActual').value;
+                const contrasena_nueva = document.getElementById('contrasenaNueva').value;
+                const currentUserEmail = document.getElementById('currentUserEmail');
+                currentUserEmail.value = localStorage.getItem('correo') || 'admin@example.com';
+
+                try {
+                    const response = await fetchData('/api/cambiar_contrasena', { method: 'PUT', body: JSON.stringify({ contrasena_actual, contrasena_nueva }) });
+                    showNotification(response.message);
+                    document.getElementById('cambiarContrasenaForm').reset();
+                } catch (error) {
+                    console.error('Error cambiando contraseña:', error);
+                    showNotification('Error al cambiar contraseña', true);
+                }
+            });
+
+            // Función loadFormOptions
+            function loadFormOptions() {
+                fetchData('/api/productos')
+                    .then(data => {
+                        const select = document.getElementById('productoSelect');
+                        select.innerHTML = '<option value="">Seleccione un producto</option>';
+                        data.forEach(producto => {
+                            const option = document.createElement('option');
+                            option.value = producto.id_producto;
+                            option.textContent = producto.nombre;
+                            select.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Error cargando productos:', error));
+
+                fetchData('/api/ubicaciones')
+                    .then(data => {
+                        const select = document.getElementById('ubicacionSelect');
+                        select.innerHTML = '<option value="">Seleccione una ubicación</option>';
+                        data.forEach(ubicacion => {
+                            const option = document.createElement('option');
+                            option.value = ubicacion.id_ubicacion;
+                            option.textContent = ubicacion.nombre;
+                            select.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Error cargando ubicaciones:', error));
+
+                fetchData('/api/roles')
+                    .then(data => {
+                        const select = document.getElementById('empleadoRol');
+                        select.innerHTML = '<option value="">Seleccione un rol</option>';
+                        data.forEach(rol => {
+                            const option = document.createElement('option');
+                            option.value = rol.id_rol;
+                            option.textContent = rol.nombre_rol;
+                            select.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Error cargando roles:', error));
+
+                fetchData('/api/categorias')
+                    .then(data => {
+                        const select = document.getElementById('productoCategoria');
+                        select.innerHTML = '<option value="">Seleccione una categoría</option>';
+                        data.forEach(categoria => {
+                            const option = document.createElement('option');
+                            option.value = categoria.id_categoria;
+                            option.textContent = categoria.nombre;
+                            select.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Error cargando categorías:', error));
+
+                fetchData('/api/proveedores')
+                    .then(data => {
+                        const select = document.getElementById('productoProveedor');
+                        select.innerHTML = '<option value="">Seleccione un proveedor</option>';
+                        data.forEach(proveedor => {
+                            const option = document.createElement('option');
+                            option.value = proveedor.id_proveedor;
+                            option.textContent = proveedor.nombre;
+                            select.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Error cargando proveedores:', error));
+            }
+
+            if (rol === 'Administrador' || rol === 'Almacenista') {
+                loadFormOptions();
+            }
+        });
+    </script>
+</body>
+</html>
