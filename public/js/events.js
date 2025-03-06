@@ -37,7 +37,6 @@ function setupEventListeners() {
         const target = e.target;
         const action = target.getAttribute('data-action');
         if (!action) return;
-        console.log(`Acción detectada: ${action}`);
 
         let tableId = target.getAttribute('data-table') || target.closest('section')?.id;
         if (!tableId && (action === 'edit' || action === 'delete')) {
@@ -61,7 +60,6 @@ function setupEventListeners() {
         else if (action === 'edit') {
             const id = target.getAttribute('data-id');
             if (tableId && id) {
-                console.log(`Editando ${tableId} con ID: ${id}`);
                 editItem(tableId, id);
             } else {
                 console.error('Falta tableId o ID para editar');
@@ -69,7 +67,6 @@ function setupEventListeners() {
         } else if (action === 'delete') {
             const id = target.getAttribute('data-id');
             if (tableId && id) {
-                console.log(`Eliminando ${tableId} con ID: ${id}`);
                 deleteItem(tableId, id);
             } else {
                 console.error('Falta tableId o ID para eliminar');
@@ -93,31 +90,35 @@ function setupEventListeners() {
             showNotification(validationError, true);
             return;
         }
-        const id = document.getElementById('productoId').value;
+        const id = document.getElementById('productoId')?.value || '';
+        const nombre = document.getElementById('productoNombre')?.value.trim() || '';
+        const codigo = document.getElementById('productoCodigo')?.value.trim() || '';
+        const id_categoria = document.getElementById('productoCategoria')?.value || '';
+        const id_proveedor = document.getElementById('productoProveedor')?.value || '';
+        const precio_unitario = parseFloat(document.getElementById('productoPrecio')?.value) || 0;
+    
         const method = id ? 'PUT' : 'POST';
         const url = id ? `/api/productos/${id}` : '/api/productos';
-        const body = {
-            nombre: document.getElementById('productoNombre').value,
-            codigo: document.getElementById('productoCodigo').value,
-            id_categoria: document.getElementById('productoCategoria').value,
-            id_proveedor: document.getElementById('productoProveedor').value,
-            precio_unitario: parseFloat(document.getElementById('productoPrecio').value)
+        const body = { 
+            nombre, 
+            codigo, 
+            id_categoria: parseInt(id_categoria), 
+            id_proveedor: parseInt(id_proveedor), 
+            precio_unitario 
         };
-
+    
         try {
-            const codigo = body.codigo;
-            let originalCodigo = '';
-            if (id) {
-                const originalResponse = await fetchData(`/api/productos/${id}`);
-                originalCodigo = originalResponse.codigo || '';
+            let checkResponse = { exists: false };
+            if (codigo) {
+                const checkUrl = `/api/productos/checkCodigo?codigo=${encodeURIComponent(codigo)}&id=${id || 0}`;
+                checkResponse = await fetchData(checkUrl);
             }
-
-            const checkUrl = `/api/productos/checkCodigo?codigo=${encodeURIComponent(codigo)}&id=${id || 0}`;
-            const checkResponse = await fetchData(checkUrl);
-            if (checkResponse.exists && (!id || (checkResponse.product?.codigo !== originalCodigo && checkResponse.product?.codigo !== codigo))) {
+    
+            if (checkResponse.exists) {
                 showNotification('El código ya está en uso por otro producto', true);
-                return;
+                return; // Detener aquí si el código está duplicado
             }
+    
             const response = await fetchData(url, { method, body: JSON.stringify(body) });
             showNotification(response.message);
             hideForm('productos');
@@ -126,11 +127,9 @@ function setupEventListeners() {
             loadTable('productos', updatedData, true);
             loadFormOptions();
         } catch (error) {
-            console.error('Error guardando producto:', error);
             showNotification(error.message || 'Error al guardar producto', true);
         }
     });
-
     document.getElementById('empleadosAddEditForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const validationError = validateForm('empleados');
@@ -139,17 +138,19 @@ function setupEventListeners() {
             return;
         }
         const id = document.getElementById('empleadoId').value;
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/empleados/${id}` : '/api/empleados';
+        const contrasena = document.getElementById('empleadoContrasena').value.trim();
         const body = {
             nombre: document.getElementById('empleadoNombre').value,
             correo: document.getElementById('empleadoCorreo').value,
             telefono: document.getElementById('empleadoTelefono').value,
             id_rol: document.getElementById('empleadoRol').value
         };
-        if (!id || document.getElementById('empleadoContrasena').value) {
-            body.contrasena = document.getElementById('empleadoContrasena').value;
+        if (contrasena) {
+            body.contrasena = contrasena;
         }
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/empleados/${id}` : '/api/empleados';
+    
         try {
             const response = await fetchData(url, { method, body: JSON.stringify(body) });
             showNotification(response.message);
@@ -157,33 +158,7 @@ function setupEventListeners() {
             filterTable('empleados', true);
         } catch (error) {
             console.error('Error guardando empleado:', error);
-            showNotification('Error al guardar empleado', true);
-        }
-    });
-
-    document.getElementById('categoriasAddEditForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const validationError = validateForm('categorias');
-        if (validationError) {
-            showNotification(validationError, true);
-            return;
-        }
-        const id = document.getElementById('categoriaId').value;
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/categorias/${id}` : '/api/categorias';
-        const body = {
-            nombre: document.getElementById('categoriaNombre').value,
-            descripcion: document.getElementById('categoriaDescripcion').value
-        };
-        try {
-            const response = await fetchData(url, { method, body: JSON.stringify(body) });
-            showNotification(response.message);
-            hideForm('categorias');
-            filterTable('categorias', true);
-            loadFormOptions();
-        } catch (error) {
-            console.error('Error guardando categoría:', error);
-            showNotification('Error al guardar categoría', true);
+            showNotification(error.message || 'Error al guardar empleado', true);
         }
     });
 
@@ -195,14 +170,15 @@ function setupEventListeners() {
             return;
         }
         const id = document.getElementById('proveedorId').value;
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/proveedores/${id}` : '/api/proveedores';
         const body = {
             nombre: document.getElementById('proveedorNombre').value,
             contacto: document.getElementById('proveedorContacto').value,
             telefono: document.getElementById('proveedorTelefono').value,
             correo: document.getElementById('proveedorCorreo').value
         };
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/proveedores/${id}` : '/api/proveedores';
+    
         try {
             const response = await fetchData(url, { method, body: JSON.stringify(body) });
             showNotification(response.message);
@@ -210,8 +186,24 @@ function setupEventListeners() {
             filterTable('proveedores', true);
         } catch (error) {
             console.error('Error guardando proveedor:', error);
-            showNotification('Error al guardar proveedor', true);
+            showNotification(error.message || 'Error al guardar proveedor', true);
         }
+    });
+
+    document.querySelectorAll('[data-action="delete-supplier"]').forEach(button => {
+        button.addEventListener('click', async () => {
+            const id = button.dataset.id; // Asumiendo que los botones tienen data-id
+            if (confirm('¿Estás seguro de eliminar este proveedor?')) {
+                try {
+                    const response = await fetchData(`/api/proveedores/${id}`, { method: 'DELETE' });
+                    showNotification(response.message);
+                    filterTable('proveedores', true);
+                } catch (error) {
+                    console.error('Error eliminando proveedor:', error);
+                    showNotification(error.message || 'Error al eliminar proveedor', true);
+                }
+            }
+        });
     });
 
     document.getElementById('ubicacionesAddEditForm').addEventListener('submit', async (e) => {
@@ -222,13 +214,14 @@ function setupEventListeners() {
             return;
         }
         const id = document.getElementById('ubicacionId').value;
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/ubicaciones/${id}` : '/api/ubicaciones';
         const body = {
             nombre: document.getElementById('ubicacionNombre').value,
             direccion: document.getElementById('ubicacionDireccion').value,
             tipo: document.getElementById('ubicacionTipo').value
         };
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/ubicaciones/${id}` : '/api/ubicaciones';
+    
         try {
             const response = await fetchData(url, { method, body: JSON.stringify(body) });
             showNotification(response.message);
@@ -236,11 +229,52 @@ function setupEventListeners() {
             filterTable('ubicaciones', true);
         } catch (error) {
             console.error('Error guardando ubicación:', error);
-            showNotification('Error al guardar ubicación', true);
+            showNotification(error.message || 'Error al guardar ubicación', true);
         }
     });
 
-    document.getElementById('rolesAddEditForm').addEventListener('submit', async (e) => {
+    const categoriasForm = document.getElementById('categoriasAddEditForm');
+    if (categoriasForm) {
+        categoriasForm.removeEventListener('submit', categoriasForm._submitHandler); // Limpiar listener previo si existe
+        const submitHandler = async (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Prevenir propagación para evitar duplicados
+            const validationError = validateForm('categorias');
+            if (validationError) {
+                showNotification(validationError, true);
+                return;
+            }
+            const id = document.getElementById('categoriaId')?.value || '';
+            const nombre = document.getElementById('categoriaNombre')?.value.trim() || '';
+            const descripcion = document.getElementById('categoriaDescripcion')?.value.trim() || '';
+    
+            if (!nombre) {
+                showNotification('El nombre de la categoría es obligatorio', true);
+                return;
+            }
+    
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/categorias/${id}` : '/api/categorias';
+            const body = { nombre, descripcion };
+    
+            try {
+                const response = await fetchData(url, { method, body: JSON.stringify(body) });
+                showNotification(response.message);
+                hideForm('categorias'); // Ocultar después de la respuesta
+                filterTable('categorias', true);
+                loadFormOptions();
+            } catch (error) {
+                console.error('Error guardando categoría:', error);
+                showNotification(error.message || 'Error al guardar categoría', true);
+            }
+        };
+        categoriasForm.addEventListener('submit', submitHandler);
+        categoriasForm._submitHandler = submitHandler; // Guardar referencia para limpieza
+    }
+
+    const rolesForm = document.getElementById('rolesAddEditForm');
+if (rolesForm && !rolesForm.dataset.listenerAdded) {
+    rolesForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const validationError = validateForm('roles');
         if (validationError) {
@@ -248,12 +282,13 @@ function setupEventListeners() {
             return;
         }
         const id = document.getElementById('rolId').value;
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/roles/${id}` : '/api/roles';
         const body = {
             nombre_rol: document.getElementById('rolNombre').value,
             descripcion: document.getElementById('rolDescripcion').value
         };
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/roles/${id}` : '/api/roles';
+
         try {
             const response = await fetchData(url, { method, body: JSON.stringify(body) });
             showNotification(response.message);
@@ -261,9 +296,11 @@ function setupEventListeners() {
             filterTable('roles', true);
         } catch (error) {
             console.error('Error guardando rol:', error);
-            showNotification('Error al guardar rol', true);
+            showNotification(error.message || 'Error al guardar rol', true);
         }
     });
+    rolesForm.dataset.listenerAdded = 'true';
+}
 
     document.getElementById('movimientoForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -409,6 +446,48 @@ function loadInitialData() {
     if (rol === 'Administrador' || rol === 'Auditor' || rol === 'Contador') {
         loadReporte('stock_bajo');
     }
+}
+
+const cambiarContrasenaForm = document.getElementById('cambiarContrasenaForm');
+if (cambiarContrasenaForm && !cambiarContrasenaForm.dataset.listenerAdded) {
+    cambiarContrasenaForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const contrasenaActual = document.getElementById('contrasenaActual').value;
+        const contrasenaNueva = document.getElementById('contrasenaNueva').value;
+        
+        if (!contrasenaActual || !contrasenaNueva) {
+            showNotification('Por favor, completa ambos campos', true);
+            return;
+        }
+
+        if (contrasenaNueva.length < 6) {
+            showNotification('La nueva contraseña debe tener al menos 6 caracteres', true);
+            return;
+        }
+
+        const body = {
+            contrasenaActual,
+            contrasenaNueva
+        };
+        console.log('Datos enviados al backend (cambiar contraseña):', JSON.stringify(body, null, 2)); // Log temporal
+
+        try {
+            const response = await fetchData('/api/empleados/cambiar-contrasena', {
+                method: 'PUT',
+                body: JSON.stringify(body)
+            });
+            console.log('Respuesta del servidor:', response); // Log temporal
+            showNotification(response.message);
+            document.getElementById('contrasenaMensaje').textContent = response.message;
+            document.getElementById('contrasenaMensaje').style.display = 'block';
+            cambiarContrasenaForm.reset(); // Limpiar el formulario
+        } catch (error) {
+            console.error('Error al cambiar contraseña:', error);
+            showNotification(error.message || 'Error al cambiar contraseña', true);
+        }
+    });
+    cambiarContrasenaForm.dataset.listenerAdded = 'true';
 }
 
 export { setupEventListeners, loadInitialData };

@@ -3,8 +3,22 @@ const router = express.Router();
 const db = require('../db');
 const { authenticateToken } = require('../middleware');
 
+router.get('/checkCodigo', authenticateToken, (req, res) => {
+    const { codigo, id } = req.query;
+    if (!codigo) {
+        return res.status(400).json({ message: 'Código requerido', exists: false });
+    }
+    const query = 'SELECT id_producto, codigo FROM Productos WHERE codigo = ? AND id_producto != ?';
+    db.query(query, [codigo, parseInt(id) || 0], (err, results) => {
+        if (err) {
+            return res.status(500).json({ message: 'Error en el servidor', exists: false });
+        }
+        const exists = results.length > 0;
+        res.json({ exists, product: exists ? results[0] : null });
+    });
+});
+
 router.get('/', authenticateToken, (req, res) => {
-    console.log('Solicitud recibida en GET /api/productos');
     const query = `
         SELECT p.id_producto, p.nombre, p.codigo, c.nombre AS categoria, pr.nombre AS proveedor, p.precio_unitario
         FROM Productos p
@@ -31,102 +45,106 @@ router.get('/:id', authenticateToken, (req, res) => {
 });
 
 router.post('/', authenticateToken, (req, res) => {
-    if (req.user.rol !== 'Administrador') return res.status(403).json({ message: 'No tienes permiso' });
+    if (req.user.rol !== 'Administrador') {
+        return res.status(403).json({ message: 'No tienes permiso para realizar esta acción. Se requiere rol de Administrador.' });
+    }
     const { nombre, codigo, id_categoria, id_proveedor, precio_unitario } = req.body;
-    if (!nombre || !codigo || !id_categoria || !id_proveedor || !precio_unitario) {
-        return res.status(400).json({ message: 'Faltan campos requeridos' });
+
+    if (!nombre || !codigo || !id_categoria || !id_proveedor || precio_unitario === undefined) {
+        return res.status(400).json({ message: 'Faltan campos requeridos: nombre, código, categoría, proveedor y precio son obligatorios' });
     }
-    if (precio_unitario < 0) {
-        return res.status(400).json({ message: 'El precio debe ser mayor o igual a 0' });
-    }
-    const checkQuery = 'SELECT id_producto FROM Productos WHERE codigo = ?';
-    db.query(checkQuery, [codigo], (err, results) => {
+
+    const query = `
+        INSERT INTO Productos (nombre, codigo, id_categoria, id_proveedor, precio_unitario)
+        VALUES (?, ?, ?, ?, ?)
+    `;
+    db.query(query, [nombre, codigo, parseInt(id_categoria), parseInt(id_proveedor), parseFloat(precio_unitario)], (err, result) => {
         if (err) {
-            console.error('Error verificando código:', err);
-            return res.status(500).json({ message: 'Error en el servidor' });
-        }
-        if (results.length > 0) {
-            return res.status(400).json({ message: 'El código ya está en uso por otro producto' });
-        }
-        const query = `
-            INSERT INTO Productos (nombre, codigo, id_categoria, id_proveedor, precio_unitario)
-            VALUES (?, ?, ?, ?, ?)
-        `;
-        db.query(query, [nombre, codigo, id_categoria, id_proveedor, precio_unitario], (err) => {
-            if (err) {
-                console.error('Error agregando producto:', err);
-                return res.status(500).json({ message: 'Error al agregar producto' });
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(400).json({ message: 'El código del producto ya existe en la base de datos' });
             }
-            res.json({ message: 'Producto agregado exitosamente' });
-        });
+            return res.status(500).json({ message: 'Error al agregar producto', error: err.message });
+        }
+        res.json({ message: 'Producto agregado exitosamente' });
     });
 });
 
 router.put('/:id', authenticateToken, (req, res) => {
-    if (req.user.rol !== 'Administrador') return res.status(403).json({ message: 'No tienes permiso' });
+    if (req.user.rol !== 'Administrador') {
+        return res.status(403).json({ message: 'No tienes permiso para realizar esta acción. Se requiere rol de Administrador.' });
+    }
+    const id = req.params.id;
     const { nombre, codigo, id_categoria, id_proveedor, precio_unitario } = req.body;
-    if (!nombre || !codigo || !id_categoria || !id_proveedor || !precio_unitario) {
-        return res.status(400).json({ message: 'Faltan campos requeridos' });
-    }
-    if (precio_unitario < 0) {
-        return res.status(400).json({ message: 'El precio debe ser mayor o igual a 0' });
-    }
-    const checkQuery = 'SELECT id_producto FROM Productos WHERE codigo = ? AND id_producto != ?';
-    db.query(checkQuery, [codigo, req.params.id], (err, results) => {
-        if (err) {
-            console.error('Error verificando código:', err);
-            return res.status(500).json({ message: 'Error en el servidor' });
-        }
-        if (results.length > 0) {
-            return res.status(400).json({ message: 'El código ya está en uso por otro producto' });
-        }
-        const query = `
-            UPDATE Productos 
-            SET nombre = ?, codigo = ?, id_categoria = ?, id_proveedor = ?, precio_unitario = ?
-            WHERE id_producto = ?
-        `;
-        db.query(query, [nombre, codigo, id_categoria, id_proveedor, precio_unitario, req.params.id], (err) => {
-            if (err) {
-                console.error('Error actualizando producto:', err);
-                return res.status(500).json({ message: 'Error al actualizar producto' });
-            }
-            res.json({ message: 'Producto actualizado exitosamente' });
-        });
-    });
-});
 
-router.get('/checkCodigo', authenticateToken, (req, res) => {
-    const { codigo, id } = req.query;
-    if (!codigo) {
-        return res.status(400).json({ message: 'Código requerido', exists: false });
+    if (!nombre || !codigo || !id_categoria || !id_proveedor || precio_unitario === undefined) {
+        return res.status(400).json({ message: 'Faltan campos requeridos: nombre, código, categoría, proveedor y precio son obligatorios' });
     }
-    const query = 'SELECT id_producto, codigo FROM Productos WHERE codigo = ?';
-    db.query(query, [codigo], (err, results) => {
+
+    const query = `
+        UPDATE Productos 
+        SET nombre = ?, codigo = ?, id_categoria = ?, id_proveedor = ?, precio_unitario = ?
+        WHERE id_producto = ?
+    `;
+    db.query(query, [nombre, codigo, parseInt(id_categoria), parseInt(id_proveedor), parseFloat(precio_unitario), parseInt(id)], (err, result) => {
         if (err) {
-            console.error('Error verificando código:', err);
-            return res.status(500).json({ message: 'Error en el servidor', exists: false });
-        }
-        const exists = results.length > 0;
-        if (exists && id) {
-            const product = results[0];
-            if (product.id_producto.toString() === id.toString()) {
-                return res.json({ exists: false, product });
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(400).json({ message: 'El código del producto ya existe en la base de datos' });
             }
+            return res.status(500).json({ message: 'Error al actualizar producto', error: err.message });
         }
-        res.json({ exists, product: exists ? results[0] : null });
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Producto no encontrado' });
+        }
+        res.json({ message: 'Producto actualizado exitosamente' });
     });
 });
 
 router.delete('/:id', authenticateToken, (req, res) => {
     if (req.user.rol !== 'Administrador') return res.status(403).json({ message: 'No tienes permiso' });
-    const query = 'DELETE FROM Productos WHERE id_producto = ?';
-    db.query(query, [req.params.id], (err, results) => {
+    const id = req.params.id;
+
+    db.beginTransaction((err) => {
         if (err) {
-            console.error('Error eliminando producto:', err);
             return res.status(500).json({ message: 'Error al eliminar producto' });
         }
-        if (results.affectedRows === 0) return res.status(404).json({ message: 'Producto no encontrado' });
-        res.json({ message: 'Producto eliminado exitosamente' });
+
+        db.query('DELETE FROM Inventario_Actual WHERE id_producto = ?', [id], (err) => {
+            if (err) {
+                return db.rollback(() => {
+                    res.status(500).json({ message: 'Error al eliminar producto relacionado en inventario' });
+                });
+            }
+
+            db.query('DELETE FROM Movimientos_Inventario WHERE id_producto = ?', [id], (err) => {
+                if (err) {
+                    return db.rollback(() => {
+                        res.status(500).json({ message: 'Error al eliminar producto relacionado en movimientos' });
+                    });
+                }
+
+                db.query('DELETE FROM Productos WHERE id_producto = ?', [id], (err, results) => {
+                    if (err) {
+                        return db.rollback(() => {
+                            res.status(500).json({ message: 'Error al eliminar producto' });
+                        });
+                    }
+                    if (results.affectedRows === 0) {
+                        return db.rollback(() => {
+                            res.status(404).json({ message: 'Producto no encontrado' });
+                        });
+                    }
+
+                    db.commit((err) => {
+                        if (err) {
+                            return db.rollback(() => {
+                                res.status(500).json({ message: 'Error al eliminar producto' });
+                            });
+                        }
+                        res.json({ message: 'Producto eliminado exitosamente' });
+                    });
+                });
+            });
+        });
     });
 });
 

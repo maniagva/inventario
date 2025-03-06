@@ -15,7 +15,6 @@ async function generateHashes() {
     for (const empleado of empleados) {
         try {
             const hash = await bcrypt.hash(empleado.contrasena, 10); // 10 es el número de rondas de sal
-            console.log(`UPDATE Empleados SET contrasena_hash = '${hash}' WHERE id_empleado = ${empleado.id}; -- ${empleado.correo}: ${empleado.contrasena}`);
         } catch (error) {
             console.error(`Error generando hash para ${empleado.correo}:`, error);
         }
