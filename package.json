@@ -2,9 +2,9 @@
     "name": "inventario_app",
     "version": "1.0.0",
     "description": "Aplicación de gestión de inventario",
-    "main": "server/app.js",
+    "main": "server.js",
     "scripts": {
-        "start": "node server/app.js"
+        "start": "node server.js"
     },
     "dependencies": {
         "bcrypt": "^5.1.1",

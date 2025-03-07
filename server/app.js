@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(express.static('public'));
 app.use(express.json());
@@ -37,12 +37,17 @@ app.use('/api/config', configRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public', 'login.html'));
+    res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
 // Manejador de errores 404
 app.use((req, res, next) => {
     res.status(404).json({ message: 'Ruta no encontrada' });
+});
+
+// Iniciar el servidor
+app.listen(port, () => {
+    console.log(`Servidor escuchando en http://localhost:${port}`);
 });
 
 module.exports = app;
